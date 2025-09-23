@@ -1,0 +1,81 @@
+name: Python Package CI/CD
+
+on:
+  push:
+    branches:
+      - main # Or your default branch
+    tags:
+      - '*.*.*' # For publishing to PyPI
+  pull_request:
+    branches:
+      - main # Or your default branch
+
+jobs:
+  build_and_test:
+    name: Build and Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"] # graphql-db requires Python 3.11+
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install UV
+      uses: astral-sh/setup-uv@v3
+
+    - name: Install dependencies
+      run: uv sync --dev
+
+    - name: Lint with Flake8
+      run: uv run flake8 graphql_db tests
+
+    - name: Test with Pytest
+      run: uv run pytest
+
+  publish:
+    name: Publish to PyPI
+    needs: build_and_test # Ensure tests pass before publishing
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    permissions:
+      id-token: write
+
+    steps:
+    - name: Validate tag format (e.g., 1.0.0)
+      run: |
+        TAG_NAME="${{ github.ref_name }}"
+        if ! [[ "$TAG_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "Error: Tag '$TAG_NAME' is not in the required X.Y.Z numeric format (e.g., 1.0.0)."
+          exit 1
+        fi
+        echo "Tag '$TAG_NAME' is valid."
+      shell: bash
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12' # Use compatible Python version
+
+    - name: Install UV
+      uses: astral-sh/setup-uv@v3
+
+    - name: Update version in pyproject.toml
+      run: |
+        TAG_NAME="${{ github.ref_name }}"
+        sed -i "s/version = \".*\"/version = \"$TAG_NAME\"/" pyproject.toml
+        echo "Updated version to $TAG_NAME"
+      shell: bash
+
+    - name: Build and publish package to PyPI
+      run: uv build && uv publish
