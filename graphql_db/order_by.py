@@ -14,7 +14,9 @@ class OrderByDirection(Enum):
 class OrderBy:
     """Simple order by class for SQLAlchemy queries."""
 
-    def __init__(self, key: str, direction: OrderByDirection = OrderByDirection.asc):
+    def __init__(
+        self, key: str, direction: OrderByDirection = OrderByDirection.asc
+    ):
         self.key = key
         self.direction = direction
 

@@ -23,7 +23,7 @@ class TestEdgeCases:
             name: Mapped[str] = mapped_column(String(50))
 
         # Create tables
-        db_manager.base.metadata.create_all(db_manager.engine)
+        db_manager.base.metadata.create_all(db_manager.engine)  # type: ignore
 
         def test_empty_queries():
             # Test empty queries
@@ -52,15 +52,19 @@ class TestEdgeCases:
             __tablename__ = 'profiles'
 
             username: Mapped[str] = mapped_column(String(50))
-            bio: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+            bio: Mapped[Optional[str]] = mapped_column(
+                String(500), nullable=True
+            )
             age: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
         # Create tables
-        db_manager.base.metadata.create_all(db_manager.engine)
+        db_manager.base.metadata.create_all(db_manager.engine)  # type: ignore
 
         def test_null_handling():
             # Create profile with all fields
-            profile1 = Profile(username="alice", bio="Software engineer", age=30)
+            profile1 = Profile(
+                username="alice", bio="Software engineer", age=30
+            )  # type: ignore
             profile1.create()
 
             # Create profile with only required fields
@@ -111,11 +115,15 @@ class TestEdgeCases:
             assert len(result.data["profiles"]) == 3
 
             # Check that null values are handled correctly
-            alice_profile = next(p for p in result.data["profiles"] if p["username"] == "alice")
+            alice_profile = next(
+                p for p in result.data["profiles"] if p["username"] == "alice"
+            )  # type: ignore
             assert alice_profile["bio"] == "Software engineer"
             assert alice_profile["age"] == 30
 
-            bob_profile = next(p for p in result.data["profiles"] if p["username"] == "bob")
+            bob_profile = next(
+                p for p in result.data["profiles"] if p["username"] == "bob"
+            )  # type: ignore
             assert bob_profile["bio"] is None
             assert bob_profile["age"] is None
 
@@ -130,23 +138,25 @@ class TestEdgeCases:
             name: Mapped[str] = mapped_column(String(50))
 
         # Create tables
-        db_manager.base.metadata.create_all(db_manager.engine)
+        db_manager.base.metadata.create_all(db_manager.engine)  # type: ignore
 
         def test_uuid_validation():
             item = Item(name="test item")
             item.create()
 
-            # Test invalid UUID strings - these should raise StatementError due to UUID validation
+            # Test invalid UUID strings - these should raise StatementError
+            # due to UUID validation
             from sqlalchemy.exc import StatementError
             with pytest.raises((ValueError, TypeError, StatementError)):
-                Item.get("not-a-uuid")
+                Item.get("not-a-uuid")  # type: ignore
 
             with pytest.raises((ValueError, TypeError, StatementError)):
-                Item.get("12345")
+                Item.get("12345")  # type: ignore
 
-            # Empty string might be handled differently, let's test what actually happens
+            # Empty string might be handled differently, let's test what
+            # actually happens
             try:
-                result = Item.get("")
+                result = Item.get("")  # type: ignore
                 # If no exception, result should be None
                 assert result is None, f"Expected None but got {result}"
             except (ValueError, TypeError, StatementError):
@@ -154,7 +164,7 @@ class TestEdgeCases:
                 pass
 
             # Test None handling
-            result = Item.get(None)
+            result = Item.get(None)  # type: ignore
             assert result is None
 
             # Test valid UUID as string
@@ -175,7 +185,7 @@ class TestEdgeCases:
             email: Mapped[str] = mapped_column(String(100), unique=True)
 
         # Create tables
-        db_manager.base.metadata.create_all(db_manager.engine)
+        db_manager.base.metadata.create_all(db_manager.engine)  # type: ignore
 
         def test_unique_constraints():
             # Create first user
@@ -186,8 +196,11 @@ class TestEdgeCases:
             user2 = UniqueUser(username="alice", email="different@example.com")
             try:
                 user2.create()
-                # If SQLite doesn't enforce unique constraints, that's OK for this test
-                print("SQLite doesn't enforce unique constraints in this setup")
+                # If SQLite doesn't enforce unique constraints, that's OK
+                # for this test
+                print(
+                    "SQLite doesn't enforce unique constraints in this setup"
+                )
             except IntegrityError:
                 # Expected behavior - rollback
                 from context_helper import ctx
@@ -197,7 +210,9 @@ class TestEdgeCases:
             user3 = UniqueUser(username="different", email="alice@example.com")
             try:
                 user3.create()
-                print("SQLite doesn't enforce unique constraints in this setup")
+                print(
+                    "SQLite doesn't enforce unique constraints in this setup"
+                )
             except IntegrityError:
                 # Expected behavior - rollback
                 from context_helper import ctx
@@ -224,10 +239,12 @@ class TestEdgeCases:
         class Book(ModelBase):
             __tablename__ = 'books'
             title: Mapped[str] = mapped_column(String(200))
-            author_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('authors.id'))
+            author_id: Mapped[uuid.UUID] = mapped_column(
+                ForeignKey('authors.id')
+            )
 
         # Create tables
-        db_manager.base.metadata.create_all(db_manager.engine)
+        db_manager.base.metadata.create_all(db_manager.engine)  # type: ignore
 
         def test_foreign_key_handling():
             # Create author
@@ -251,7 +268,9 @@ class TestEdgeCases:
             assert len(books) >= 1  # At least the valid book
 
             # Test filtering by foreign key
-            author_books = Book.query().filter(Book.author_id == author.id).all()
+            author_books = Book.query().filter(
+                Book.author_id == author.id
+            ).all()
             assert len(author_books) == 1
             assert author_books[0].title == "Great Book"
 
@@ -267,7 +286,7 @@ class TestEdgeCases:
             category: Mapped[str] = mapped_column(String(20))
 
         # Create tables
-        db_manager.base.metadata.create_all(db_manager.engine)
+        db_manager.base.metadata.create_all(db_manager.engine)  # type: ignore
 
         def test_bulk_operations():
             # Create 100 data points
@@ -283,14 +302,20 @@ class TestEdgeCases:
             assert len(all_points) == 100
 
             # Test filtering
-            even_points = DataPoint.query().filter(DataPoint.category == "even").all()
+            even_points = DataPoint.query().filter(
+                DataPoint.category == "even"
+            ).all()
             assert len(even_points) == 50
 
-            odd_points = DataPoint.query().filter(DataPoint.category == "odd").all()
+            odd_points = DataPoint.query().filter(
+                DataPoint.category == "odd"
+            ).all()
             assert len(odd_points) == 50
 
             # Test ordering
-            ordered_points = DataPoint.query().order_by(DataPoint.value.desc()).limit(5).all()
+            ordered_points = DataPoint.query().order_by(
+                DataPoint.value.desc()
+            ).limit(5).all()
             assert len(ordered_points) == 5
             assert ordered_points[0].value == 99
 
@@ -311,7 +336,7 @@ class TestEdgeCases:
             name: Mapped[str] = mapped_column(String(50))
 
         # Create tables
-        db_manager.base.metadata.create_all(db_manager.engine)
+        db_manager.base.metadata.create_all(db_manager.engine)  # type: ignore
 
         def test_session_edge_cases():
             # Test creating multiple objects in same session
@@ -352,14 +377,16 @@ class TestEdgeCases:
             name: Mapped[str] = mapped_column(String(50))
 
         # Create tables
-        db_manager.base.metadata.create_all(db_manager.engine)
+        db_manager.base.metadata.create_all(db_manager.engine)  # type: ignore
 
         schema = GraphQLAPI()
 
         @schema.type(is_root_type=True)
         class Query:
             @schema.field
-            def test_model(self, model_id: uuid.UUID) -> Optional[ErrorTestModel]:
+            def test_model(
+                self, model_id: uuid.UUID
+            ) -> Optional[ErrorTestModel]:
                 return ErrorTestModel.get(model_id)
 
             @schema.field

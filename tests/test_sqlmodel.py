@@ -54,7 +54,9 @@ class TestSQLModel:
 
     def test_sqlmodel_relationships(self):
         """Test SQLModel with relationships between Team and SuperHero."""
-        from sqlmodel import Field, Session, SQLModel, create_engine, select, Relationship
+        from sqlmodel import (
+            Field, Session, SQLModel, create_engine, select, Relationship
+        )
 
         class Team(GraphQLSQLAlchemyMixin, SQLModel, table=True):
             id: int | None = Field(default=None, primary_key=True)
@@ -86,10 +88,22 @@ class TestSQLModel:
             session.commit()
 
             # Create heroes with team relationships
-            iron_man = SuperHero(name="Iron Man", real_name="Tony Stark", age=45, team_id=avengers.id)
-            captain_america = SuperHero(name="Captain America", real_name="Steve Rogers", age=100, team_id=avengers.id)
-            wolverine = SuperHero(name="Wolverine", real_name="Logan", age=200, team_id=xmen.id)
-            solo_hero = SuperHero(name="Spider-Man", real_name="Peter Parker", age=25)  # No team
+            iron_man = SuperHero(
+                name="Iron Man", real_name="Tony Stark",
+                age=45, team_id=avengers.id
+            )
+            captain_america = SuperHero(
+                name="Captain America", real_name="Steve Rogers",
+                age=100, team_id=avengers.id
+            )
+            wolverine = SuperHero(
+                name="Wolverine", real_name="Logan",
+                age=200, team_id=xmen.id
+            )
+            # No team
+            solo_hero = SuperHero(
+                name="Spider-Man", real_name="Peter Parker", age=25
+            )
 
             session.add_all([iron_man, captain_america, wolverine, solo_hero])
             session.commit()
@@ -103,21 +117,25 @@ class TestSQLModel:
             def teams(self) -> List[Team]:
                 with Session(engine) as session:
                     statement = select(Team)
-                    return session.exec(statement).all()
+                    return list(session.exec(statement).all())
 
             @schema.field
             def heroes(self) -> List[SuperHero]:
                 from sqlalchemy.orm import selectinload
                 with Session(engine) as session:
-                    statement = select(SuperHero).options(selectinload(SuperHero.team))
-                    return session.exec(statement).all()
+                    statement = select(SuperHero).options(
+                        selectinload(SuperHero.team)  # type: ignore
+                    )
+                    return list(session.exec(statement).all())
 
             @schema.field
             def team_by_name(self, name: str) -> Optional[Team]:
                 from sqlalchemy.orm import selectinload
                 with Session(engine) as session:
-                    statement = select(Team).options(selectinload(Team.heroes)).where(Team.name == name)
-                    return session.exec(statement).first()
+                    statement = select(Team).options(selectinload(
+                        Team.heroes  # type: ignore
+                    )).where(Team.name == name)
+                    return session.exec(statement).one_or_none()
 
         # Test basic team query
         team_query = '''

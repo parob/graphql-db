@@ -23,7 +23,7 @@ class TestModel:
             name = Column(String)
             age = Column(Integer)
 
-        ed = Person(name='ed', age=55)
+        ed = Person(name='ed', age=55)  # type: ignore
 
         schema = GraphQLAPI()
 
@@ -68,7 +68,7 @@ class TestModel:
 
         person_id = uuid.uuid4()
 
-        person = Person(id=person_id, name='joe')
+        person = Person(id=person_id, name='joe')  # type: ignore
 
         schema = GraphQLAPI()
 
@@ -89,6 +89,7 @@ class TestModel:
             '''
 
         result = schema.executor().execute(gql_query)
+        assert result.data is not None
         assert person_id == uuid.UUID(result.data["person"]["id"])
 
     def test_relationship(self):
@@ -110,7 +111,9 @@ class TestModel:
                 back_populates="home_inhabitants",
             )
 
-            holiday_home_id = Column(UUIDType, ForeignKey("property.id"), nullable=True)
+            holiday_home_id = Column(
+                UUIDType, ForeignKey("property.id"), nullable=True
+            )
 
             holiday_home = relationship(
                 "Property",
@@ -138,7 +141,8 @@ class TestModel:
                 back_populates="holiday_home",
             )
 
-        steve = Person(name='steve', age=55, home=Property(name="steves house"))
+        steve = Person(name='steve', age=55)  # type: ignore
+        steve.home = Property(name="steves house")  # type: ignore
 
         schema = GraphQLAPI()
 
@@ -195,4 +199,9 @@ class TestModel:
 
         graphql_schema = schema.build_schema()
 
-        assert graphql_schema[0].query_type.fields["person"].type.of_type.fields
+        assert graphql_schema is not None
+        assert graphql_schema[0].query_type is not None
+        assert graphql_schema[0].query_type.fields is not None
+        person_fields = graphql_schema[0].query_type.fields["person"]
+        assert person_fields is not None
+        assert person_fields.type.of_type.fields

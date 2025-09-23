@@ -24,7 +24,9 @@ class TestIntegration:
             username: Mapped[str] = mapped_column(String(50), unique=True)
             email: Mapped[str] = mapped_column(String(100), unique=True)
             is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-            created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+            created_at: Mapped[datetime] = mapped_column(
+                DateTime, default=datetime.utcnow
+            )
 
             # Relationships
             posts = relationship("Post", back_populates="author")
@@ -36,8 +38,12 @@ class TestIntegration:
             title: Mapped[str] = mapped_column(String(200))
             content: Mapped[str] = mapped_column(Text)
             published: Mapped[bool] = mapped_column(Boolean, default=False)
-            created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-            author_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('users.id'))
+            created_at: Mapped[datetime] = mapped_column(
+                DateTime, default=datetime.utcnow
+            )
+            author_id: Mapped[uuid.UUID] = mapped_column(
+                ForeignKey('users.id')
+            )
 
             # Relationships
             author = relationship("User", back_populates="posts")
@@ -47,16 +53,22 @@ class TestIntegration:
             __tablename__ = 'comments'
 
             content: Mapped[str] = mapped_column(Text)
-            created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-            author_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('users.id'))
-            post_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('posts.id'))
+            created_at: Mapped[datetime] = mapped_column(
+                DateTime, default=datetime.utcnow
+            )
+            author_id: Mapped[uuid.UUID] = mapped_column(
+                ForeignKey('users.id')
+            )
+            post_id: Mapped[uuid.UUID] = mapped_column(
+                ForeignKey('posts.id')
+            )
 
             # Relationships
             author = relationship("User", back_populates="comments")
             post = relationship("Post", back_populates="comments")
 
         # Manually create tables since models are defined locally
-        db_manager.base.metadata.create_all(db_manager.engine)
+        db_manager.base.metadata.create_all(db_manager.engine)  # type: ignore
 
         # Create GraphQL API
         schema = GraphQLAPI()
@@ -84,7 +96,9 @@ class TestIntegration:
                 return user
 
             @schema.field
-            def create_post(self, title: str, content: str, author_id: uuid.UUID) -> Post:
+            def create_post(
+                self, title: str, content: str, author_id: uuid.UUID
+            ) -> Post:
                 post = Post(title=title, content=content, author_id=author_id)
                 post.create()
                 return post
@@ -143,6 +157,7 @@ class TestIntegration:
 
             # Test relationships
             alice = User.query().filter(User.username == "alice").first()
+            assert alice is not None
             assert len(alice.posts) == 2
             assert alice.posts[0].author.username == "alice"
 
@@ -182,41 +197,59 @@ class TestIntegration:
         class Enrollment(ModelBase):
             __tablename__ = 'enrollments'
 
-            student_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('students.id'))
-            course_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('courses.id'))
+            student_id: Mapped[uuid.UUID] = mapped_column(
+                ForeignKey('students.id')
+            )
+            course_id: Mapped[uuid.UUID] = mapped_column(
+                ForeignKey('courses.id')
+            )
             grade: Mapped[Optional[str]] = mapped_column(String(2))
-            enrolled_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+            enrolled_at: Mapped[datetime] = mapped_column(
+                DateTime, default=datetime.utcnow
+            )
 
             # Relationships
             student = relationship("Student")
             course = relationship("Course")
 
         # Create tables
-        db_manager.base.metadata.create_all(db_manager.engine)
+        db_manager.base.metadata.create_all(db_manager.engine)  # type: ignore
 
         def test_enrollment_system():
             # Create students
-            alice = Student(name="Alice Johnson", email="alice@school.edu")
+            alice = Student(
+                name="Alice Johnson", email="alice@school.edu"
+            )
             alice.create()
 
             bob = Student(name="Bob Smith", email="bob@school.edu")
             bob.create()
 
             # Create courses
-            math = Course(name="Mathematics 101", description="Basic mathematics")
+            math = Course(
+                name="Mathematics 101", description="Basic mathematics"
+            )
             math.create()
 
-            cs = Course(name="Computer Science 101", description="Intro to programming")
+            cs = Course(
+                name="Computer Science 101", description="Intro to programming"
+            )
             cs.create()
 
             # Create enrollments
-            enrollment1 = Enrollment(student_id=alice.id, course_id=math.id, grade="A")
+            enrollment1 = Enrollment(
+                student_id=alice.id, course_id=math.id, grade="A"
+            )
             enrollment1.create()
 
-            enrollment2 = Enrollment(student_id=alice.id, course_id=cs.id, grade="B+")
+            enrollment2 = Enrollment(
+                student_id=alice.id, course_id=cs.id, grade="B+"
+            )
             enrollment2.create()
 
-            enrollment3 = Enrollment(student_id=bob.id, course_id=cs.id, grade="A-")
+            enrollment3 = Enrollment(
+                student_id=bob.id, course_id=cs.id, grade="A-"
+            )
             enrollment3.create()
 
             # Test complex queries
@@ -224,11 +257,15 @@ class TestIntegration:
             assert len(enrollments) == 3
 
             # Test filtering by grade
-            a_grades = Enrollment.query().filter(Enrollment.grade.like("A%")).all()
+            a_grades = Enrollment.query().filter(
+                Enrollment.grade.like("A%")
+            ).all()
             assert len(a_grades) == 2
 
             # Test relationship access
-            alice_enrollments = Enrollment.query().filter(Enrollment.student_id == alice.id).all()
+            alice_enrollments = Enrollment.query().filter(
+                Enrollment.student_id == alice.id
+            ).all()
             assert len(alice_enrollments) == 2
             assert alice_enrollments[0].student.name == "Alice Johnson"
 
@@ -247,7 +284,7 @@ class TestIntegration:
             description: Mapped[Optional[str]] = mapped_column(Text)
 
         # Create tables
-        db_manager.base.metadata.create_all(db_manager.engine)
+        db_manager.base.metadata.create_all(db_manager.engine)  # type: ignore
 
         # Create GraphQL API
         schema = GraphQLAPI()
@@ -303,7 +340,9 @@ class TestIntegration:
 
             # Test that Product type is in the schema
             types = result.data["__schema"]["types"]
-            product_type = next((t for t in types if t["name"] == "Product"), None)
+            product_type = next(
+                (t for t in types if t["name"] == "Product"), None
+            )
             assert product_type is not None
 
             # Test field queries

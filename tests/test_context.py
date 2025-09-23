@@ -26,7 +26,8 @@ class TestContent:
                 thing = Thing(name="rob", age=10)
                 thing.create()
 
-                db_session.flush()  # Make sure it's in the database for testing
+                # Make sure it's in the database for testing
+                db_session.flush()
         finally:
             db_session.rollback()
             db_session.close()

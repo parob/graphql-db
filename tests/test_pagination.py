@@ -23,10 +23,12 @@ class TestPagination:
             title: Mapped[str] = mapped_column(String(200))
             content: Mapped[str] = mapped_column(String(1000))
             view_count: Mapped[int] = mapped_column(Integer, default=0)
-            created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+            created_at: Mapped[datetime] = mapped_column(
+                DateTime, default=datetime.utcnow
+            )
 
         # Create tables
-        db_manager.base.metadata.create_all(db_manager.engine)
+        db_manager.base.metadata.create_all(db_manager.engine)  # type: ignore
 
         def test_pagination():
             # Create 50 articles
@@ -59,7 +61,9 @@ class TestPagination:
             assert first_10_ids.isdisjoint(next_10_ids)
 
             # Test ordering with pagination
-            by_views_desc = Article.query().order_by(Article.view_count.desc()).limit(5).all()
+            by_views_desc = Article.query().order_by(
+                Article.view_count.desc()
+            ).limit(5).all()
             assert len(by_views_desc) == 5
             assert by_views_desc[0].view_count >= by_views_desc[1].view_count
 
@@ -87,13 +91,15 @@ class TestPagination:
             name: Mapped[str] = mapped_column(String(100))
             price: Mapped[int] = mapped_column(Integer)  # Price in cents
             category: Mapped[str] = mapped_column(String(50))
-            created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+            created_at: Mapped[datetime] = mapped_column(
+                DateTime, default=datetime.utcnow
+            )
 
         # Create tables
-        db_manager.base.metadata.create_all(db_manager.engine)
+        db_manager.base.metadata.create_all(db_manager.engine)  # type: ignore
 
         # Create Relay connection
-        ProductConnection = relay_connection(Product)
+        ProductConnection = relay_connection(Product)  # type: ignore
 
         def test_relay_pagination():
             # Create 20 products
@@ -126,7 +132,10 @@ class TestPagination:
                 first=5
             )
             electronics_edges = electronics_connection.edges()
-            assert all(edge.node.category == "electronics" for edge in electronics_edges)
+            assert all(
+                edge.node.category == "electronics"
+                for edge in electronics_edges
+            )
 
             # Test ordering with connection
             from graphql_db.order_by import OrderBy, OrderByDirection
@@ -157,7 +166,7 @@ class TestPagination:
             published_year: Mapped[int] = mapped_column(Integer)
 
         # Create tables
-        db_manager.base.metadata.create_all(db_manager.engine)
+        db_manager.base.metadata.create_all(db_manager.engine)  # type: ignore
 
         schema = GraphQLAPI()
 
@@ -191,7 +200,9 @@ class TestPagination:
                 return query.all()
 
             @schema.field
-            def books_by_author(self, author: str, limit: Optional[int] = 10) -> list[Book]:
+            def books_by_author(
+                self, author: str, limit: Optional[int] = 10
+            ) -> list[Book]:
                 return Book.query().filter(
                     Book.author.like(f"%{author}%")
                 ).limit(limit).all()
@@ -267,7 +278,8 @@ class TestPagination:
             result = schema.executor().execute(ordered_query)
             assert result.data is not None
             authors = [book["author"] for book in result.data["books"]]
-            assert authors == sorted(authors)  # Should be alphabetically sorted
+            assert authors == sorted(authors)  # Should be alphabetically
+            # sorted
 
             # Test filtering with pagination
             author_query = '''
@@ -282,7 +294,10 @@ class TestPagination:
             result = schema.executor().execute(author_query)
             assert result.data is not None
             assert len(result.data["booksByAuthor"]) == 2  # Both Orwell books
-            assert all("George" in book["author"] for book in result.data["booksByAuthor"])
+            assert all(
+                "George" in book["author"]
+                for book in result.data["booksByAuthor"]
+            )
 
             # Test count query
             count_query = '''
@@ -306,11 +321,13 @@ class TestPagination:
 
             level: Mapped[str] = mapped_column(String(10))  # INFO, WARN, ERROR
             message: Mapped[str] = mapped_column(String(500))
-            timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+            timestamp: Mapped[datetime] = mapped_column(
+                DateTime, default=datetime.utcnow
+            )
             source: Mapped[str] = mapped_column(String(50))
 
         # Create tables
-        db_manager.base.metadata.create_all(db_manager.engine)
+        db_manager.base.metadata.create_all(db_manager.engine)  # type: ignore
 
         def test_performance():
             import time
@@ -336,14 +353,22 @@ class TestPagination:
             start_time = time.time()
             all_entries = LogEntry.query().all()
             query_time = time.time() - start_time
-            print(f"Queried all {len(all_entries)} entries in {query_time:.3f} seconds")
+            print(
+                f"Queried all {len(all_entries)} entries in "
+                f"{query_time:.3f} seconds"
+            )
             assert len(all_entries) == 1000
 
             # Test filtered query performance
             start_time = time.time()
-            error_entries = LogEntry.query().filter(LogEntry.level == "ERROR").all()
+            error_entries = LogEntry.query().filter(
+                LogEntry.level == "ERROR"
+            ).all()
             filter_time = time.time() - start_time
-            print(f"Filtered {len(error_entries)} ERROR entries in {filter_time:.3f} seconds")
+            print(
+                f"Filtered {len(error_entries)} ERROR entries in "
+                f"{filter_time:.3f} seconds"
+            )
 
             # Test paginated query performance
             start_time = time.time()
@@ -351,7 +376,10 @@ class TestPagination:
                 LogEntry.timestamp.desc()
             ).limit(50).all()
             pagination_time = time.time() - start_time
-            print(f"Got {len(recent_entries)} recent entries in {pagination_time:.3f} seconds")
+            print(
+                f"Got {len(recent_entries)} recent entries in "
+                f"{pagination_time:.3f} seconds"
+            )
             assert len(recent_entries) == 50
 
             # Test complex query performance
@@ -359,12 +387,19 @@ class TestPagination:
             complex_query = LogEntry.query().filter(
                 (LogEntry.level.in_(["ERROR", "WARN"])) &
                 (LogEntry.source == "api")
-            ).order_by(LogEntry.timestamp.desc()).limit(20).all()
+            ).order_by(
+                LogEntry.timestamp.desc()
+            ).limit(20).all()
             complex_time = time.time() - start_time
-            print(f"Complex query returned {len(complex_query)} entries in {complex_time:.3f} seconds")
+            print(
+                f"Complex query returned {len(complex_query)} entries in "
+                f"{complex_time:.3f} seconds"
+            )
 
             # Verify results
-            assert all(entry.level in ["ERROR", "WARN"] for entry in complex_query)
+            assert all(
+                entry.level in ["ERROR", "WARN"] for entry in complex_query
+            )
             assert all(entry.source == "api" for entry in complex_query)
 
         db_manager.with_db_session(test_performance)()

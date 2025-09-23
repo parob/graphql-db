@@ -1,4 +1,4 @@
-
+from typing import Optional
 from graphql_api import GraphQLAPI
 from sqlalchemy import Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -12,7 +12,12 @@ class Individual(ModelBase):
     name: Mapped[str | None] = mapped_column(String(50))
     age: Mapped[int | None] = mapped_column(Integer)
 
-    def __init__(self, name: str = None, age: int = None, **kwargs):
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        age: Optional[int] = None,
+        **kwargs
+    ):
         super().__init__(**kwargs)
         self.name = name
         self.age = age

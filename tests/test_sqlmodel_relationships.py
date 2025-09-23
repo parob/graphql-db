@@ -21,13 +21,13 @@ class TestSQLModelRelationships:
         """Test SQLModel models with relationships."""
 
         # Define models with relationships
-        class Team(SQLModel, table=True):
+        class TestTeam(SQLModel, table=True):
             id: Optional[int] = Field(default=None, primary_key=True)
             name: str
             city: str
 
             # Relationship
-            heroes: List["Hero"] = Relationship(back_populates="team")
+            heroes: List["TestHero"] = Relationship(back_populates="team")
 
             # Virtual field (computed property)
             @property
@@ -35,15 +35,17 @@ class TestSQLModelRelationships:
                 """Virtual field showing number of heroes."""
                 return len(self.heroes) if self.heroes else 0
 
-        class Hero(SQLModel, table=True):
+        class TestHero(SQLModel, table=True):
             id: Optional[int] = Field(default=None, primary_key=True)
             name: str
             secret_name: str
             age: Optional[int] = None
-            team_id: Optional[int] = Field(default=None, foreign_key="team.id")
+            team_id: Optional[int] = Field(
+                default=None, foreign_key="testteam.id"
+            )
 
             # Relationship
-            team: Optional[Team] = Relationship(back_populates="heroes")
+            team: Optional[TestTeam] = Relationship(back_populates="heroes")
 
             # Virtual field (computed property)
             @property
@@ -61,22 +63,26 @@ class TestSQLModelRelationships:
         @api.type(is_root_type=True)
         class Query:
             @api.field
-            def teams(self) -> List[Team]:
+            def teams(self) -> List[TestTeam]:
                 with Session(engine) as session:
-                    teams = session.exec(select(Team)).all()
+                    teams = list(
+                        session.exec(select(TestTeam)).all()  # type: ignore
+                    )
                     return teams
 
             @api.field
-            def heroes(self) -> List[Hero]:
+            def heroes(self) -> List[TestHero]:
                 with Session(engine) as session:
-                    heroes = session.exec(select(Hero)).all()
+                    heroes = list(
+                        session.exec(select(TestHero)).all()  # type: ignore
+                    )
                     return heroes
 
         # Test data creation
         with Session(engine) as session:
             # Create teams
-            team1 = Team(name="Avengers", city="New York")
-            team2 = Team(name="X-Men", city="Westchester")
+            team1 = TestTeam(name="Avengers", city="New York")
+            team2 = TestTeam(name="X-Men", city="Westchester")
 
             session.add(team1)
             session.add(team2)
@@ -85,15 +91,15 @@ class TestSQLModelRelationships:
             session.refresh(team2)
 
             # Create heroes
-            hero1 = Hero(
+            hero1 = TestHero(
                 name="Spider-Man", secret_name="Peter Parker",
                 age=25, team_id=team1.id
             )
-            hero2 = Hero(
+            hero2 = TestHero(
                 name="Iron Man", secret_name="Tony Stark",
                 age=45, team_id=team1.id
             )
-            hero3 = Hero(
+            hero3 = TestHero(
                 name="Wolverine", secret_name="Logan",
                 age=200, team_id=team2.id
             )
@@ -114,6 +120,7 @@ class TestSQLModelRelationships:
         ''')
 
         assert not result.errors
+        assert result.data is not None
         assert len(result.data['teams']) == 2
         assert any(team['name'] == 'Avengers' for team in result.data['teams'])
 
@@ -128,6 +135,7 @@ class TestSQLModelRelationships:
         ''')
 
         assert not result.errors
+        assert result.data is not None
         assert len(result.data['heroes']) == 3
         heroes_data = result.data['heroes']
         assert any(hero['name'] == 'Spider-Man' for hero in heroes_data)
@@ -135,7 +143,7 @@ class TestSQLModelRelationships:
     def test_sqlmodel_virtual_fields(self):
         """Test SQLModel virtual fields integration."""
 
-        class Product(SQLModel, table=True):
+        class TestProduct(SQLModel, table=True):
             id: Optional[int] = Field(default=None, primary_key=True)
             name: str
             price: float
@@ -158,14 +166,16 @@ class TestSQLModelRelationships:
         @api.type(is_root_type=True)
         class Query:
             @api.field
-            def products(self) -> List[Product]:
+            def products(self) -> List[TestProduct]:
                 with Session(engine) as session:
-                    return session.exec(select(Product)).all()
+                    return list(
+                        session.exec(select(TestProduct)).all()  # type: ignore
+                    )
 
         # Test data creation
         with Session(engine) as session:
-            product1 = Product(name="Widget", price=100.0, cost=60.0)
-            product2 = Product(name="Gadget", price=50.0, cost=30.0)
+            product1 = TestProduct(name="Widget", price=100.0, cost=60.0)
+            product2 = TestProduct(name="Gadget", price=50.0, cost=30.0)
 
             session.add(product1)
             session.add(product2)
@@ -183,10 +193,12 @@ class TestSQLModelRelationships:
         ''')
 
         assert not result.errors
+        assert result.data is not None
         assert len(result.data['products']) == 2
 
         # Find widget
         widget_data = result.data['products']
+        assert widget_data is not None
         widget = next(p for p in widget_data if p['name'] == 'Widget')
         assert widget['price'] == 100.0
         assert widget['cost'] == 60.0
