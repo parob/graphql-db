@@ -1,5 +1,5 @@
 [project]
-name = "graphql_db"
+name = "graphql-db"
 version = "0.1.0"
 description = "GraphQL Database Mapper - Generate GraphQL APIs from database models (SQLAlchemy, SQLModel, etc.)"
 readme = "README.md"
