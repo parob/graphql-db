@@ -69,7 +69,7 @@ class TestIntegration:
 
             @schema.field
             def posts(self) -> list[Post]:
-                return Post.query().filter(Post.published == True).all()
+                return Post.query().filter(Post.published.is_(True)).all()
 
             @schema.field
             def user(self, username: str) -> Optional[User]:
@@ -135,7 +135,9 @@ class TestIntegration:
             assert len(all_users) == 2
             assert all_users[0].username in ["alice", "bob"]
 
-            published_posts = Post.query().filter(Post.published == True).all()
+            published_posts = Post.query().filter(
+                Post.published.is_(True)
+            ).all()
             assert len(published_posts) == 1
             assert published_posts[0].title == "My First Post"
 

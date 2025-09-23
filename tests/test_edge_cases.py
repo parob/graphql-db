@@ -76,11 +76,15 @@ class TestEdgeCases:
             assert len(all_profiles) == 3
 
             # Test filtering by null values
-            profiles_with_bio = Profile.query().filter(Profile.bio != None).all()
+            profiles_with_bio = Profile.query().filter(
+                Profile.bio.is_not(None)
+            ).all()
             assert len(profiles_with_bio) == 1
             assert profiles_with_bio[0].username == "alice"
 
-            profiles_without_bio = Profile.query().filter(Profile.bio == None).all()
+            profiles_without_bio = Profile.query().filter(
+                Profile.bio.is_(None)
+            ).all()
             assert len(profiles_without_bio) == 2
 
             # Test GraphQL schema with nulls

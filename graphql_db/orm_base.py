@@ -7,7 +7,9 @@ from context_helper import Context, ctx
 from graphql_api import GraphQLAPI
 from sqlalchemy import UUID, String, TypeDecorator, create_engine
 from sqlalchemy.engine import Engine
-from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
+from sqlalchemy.orm import (
+    DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
+)
 from sqlalchemy_utils import create_database, database_exists
 
 from graphql_db.relay_base import RelayBase
@@ -105,7 +107,8 @@ class ModelBase(RelayBase, Base):
             session = ctx.db_session
 
         session.add(self)
-        session.flush()  # Make sure object is visible to queries in same session
+        # Make sure object is visible to queries in same session
+        session.flush()
         return True
 
     def delete(self, session: Session | None = None) -> bool:
@@ -114,7 +117,8 @@ class ModelBase(RelayBase, Base):
             session = ctx.db_session
 
         session.delete(self)
-        session.flush()  # Make sure deletion is visible to queries in same session
+        # Make sure deletion is visible to queries in same session
+        session.flush()
         return True
 
 

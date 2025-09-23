@@ -8,39 +8,34 @@ import pytest
 def cleanup_db_files(request):
     """Clean up database files and metadata around each test."""
     # GENIUS SOLUTION: Clear metadata BEFORE tests that need isolation,
-    # but RESTORE it AFTER those tests to not affect subsequent module-level model tests
+    # but RESTORE it AFTER those tests to not affect subsequent tests
     test_name = request.node.name
-    test_file = request.node.fspath.basename
 
     # Only clear metadata for tests that define models INSIDE test functions
-    needs_clearing = any(name in test_name for name in ["integration", "edge_cases", "pagination", "sqlmodel"])
-
-    # Store original metadata if we're about to clear it
-    original_base_metadata = None
-    original_sqlmodel_metadata = None
+    needs_clearing = any(name in test_name for name in [
+        "integration", "edge_cases", "pagination", "sqlmodel"
+    ])
 
     if needs_clearing:
         try:
             from graphql_db.orm_base import Base
-            # Store the current metadata
-            original_base_metadata = Base.metadata
             Base.metadata.clear()
         except ImportError:
             pass
 
         try:
             from sqlmodel import SQLModel
-            original_sqlmodel_metadata = SQLModel.metadata
             SQLModel.metadata.clear()
         except ImportError:
             pass
 
     yield  # Run the test
 
-    # CREATIVE PART: If this was a test that cleared metadata, force re-registration of module-level models
+    # CREATIVE PART: If this was a test that cleared metadata,
+    # force re-registration of module-level models
     if needs_clearing:
         try:
-            # Force reimport of module-level model files to re-register their models
+            # Force reimport to re-register their models
             import importlib
             import sys
             modules_to_reload = [
