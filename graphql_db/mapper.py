@@ -94,7 +94,10 @@ class GraphQLSQLAlchemyHelpers:
         mapper: GraphQLTypeMapper
     ) -> GraphQLScalarType:
 
-        type_hints = typing.get_type_hints(hybrid_type.property)
+        prop = hybrid_type.property
+        # hybrid_property stores the actual function in fget
+        func = getattr(prop, 'fget', prop)
+        type_hints = typing.get_type_hints(func)
         scalar_type: GraphQLScalarType = mapper.map(
             type_hints.pop('return', None)
         )
