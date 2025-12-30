@@ -77,7 +77,9 @@ class GraphQLSQLAlchemyMixin(GraphQLTypeWrapper):
             properties[_relationship.key] = _relationship
 
         for name, item in inspected_model.all_orm_descriptors.items():
-            if isinstance(item, (hybrid_method, hybrid_property)):
+            # Only expose hybrid_property, not hybrid_method
+            # hybrid_method requires arguments and can't work as a simple field
+            if isinstance(item, hybrid_property):
                 properties[name] = HybridWrapper(getattr(cls, name))
 
             if isinstance(item, AssociationProxy):

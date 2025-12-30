@@ -1,6 +1,8 @@
 from graphql_api import GraphQLAPI
 from typing import Optional, List
 
+from sqlalchemy.ext.hybrid import hybrid_property
+
 from graphql_db import GraphQLSQLAlchemyMixin
 
 
@@ -207,3 +209,119 @@ class TestSQLModel:
         hero_names = [hero["name"] for hero in avengers_data["heroes"]]
         assert "Iron Man" in hero_names
         assert "Captain America" in hero_names
+
+    def test_sqlmodel_hybrid_property_with_setter(self):
+        """Test SQLModel with hybrid_property that has setter and expression."""
+        from sqlmodel import Field, Session, SQLModel, create_engine, Relationship
+        from sqlalchemy import case, select
+
+        class Platform(GraphQLSQLAlchemyMixin, SQLModel, table=True):
+            """Platform model for testing hybrid property with relationship."""
+            id: int | None = Field(default=None, primary_key=True)
+            platform_name: str
+
+            identities: List["UserIdentity"] = Relationship(
+                back_populates="platform_connection"
+            )
+
+        class UserIdentity(GraphQLSQLAlchemyMixin, SQLModel, table=True):
+            """Model mimicking the user's UserIdentity with hybrid property."""
+            # Tell Pydantic to ignore hybrid_property
+            model_config = {"ignored_types": (hybrid_property,)}
+
+            id: int | None = Field(default=None, primary_key=True)
+            external_id: str
+            platform_connection_id: int | None = Field(
+                default=None, foreign_key="platform.id"
+            )
+            # Use explicit_identity_type as storage, hybrid exposes as identity_type
+            explicit_identity_type: str | None = Field(default=None)
+
+            platform_connection: Optional[Platform] = Relationship(
+                back_populates="identities"
+            )
+
+            @hybrid_property
+            def identity_type(self) -> Optional[str]:
+                """Get identity type - explicit value or derived from platform."""
+                if self.explicit_identity_type:
+                    return self.explicit_identity_type
+                if self.platform_connection:
+                    return self.platform_connection.platform_name
+                return None
+
+            @identity_type.inplace.setter
+            def _identity_type_setter(self, value: Optional[str]) -> None:
+                """Set explicit identity type."""
+                self.explicit_identity_type = value
+
+            @identity_type.inplace.expression
+            @classmethod
+            def _identity_type_expression(cls):
+                """SQL expression for identity_type."""
+                return case(
+                    (cls.explicit_identity_type.isnot(None), cls.explicit_identity_type),
+                    else_=select(Platform.platform_name)
+                    .where(Platform.id == cls.platform_connection_id)
+                    .correlate(cls)
+                    .scalar_subquery()
+                )
+
+        engine = create_engine("sqlite:///:memory:")
+        SQLModel.metadata.create_all(engine)
+
+        with Session(engine) as session:
+            # Create platform
+            whatsapp = Platform(platform_name="WHATSAPP")
+            session.add(whatsapp)
+            session.commit()
+
+            # Create identity with platform connection (should derive type)
+            identity1 = UserIdentity(
+                external_id="+1234567890",
+                platform_connection_id=whatsapp.id
+            )
+            # Create identity with explicit type
+            identity2 = UserIdentity(
+                external_id="agent123",
+                explicit_identity_type="ELEVENLABS_AGENT_ID"
+            )
+            session.add_all([identity1, identity2])
+            session.commit()
+            session.close()
+
+        schema = GraphQLAPI()
+
+        @schema.type(is_root_type=True)
+        class Query:
+            @schema.field
+            def identity(self, external_id: str) -> Optional[UserIdentity]:
+                from sqlalchemy.orm import selectinload
+                from sqlmodel import select as sm_select
+                with Session(engine) as session:
+                    statement = sm_select(UserIdentity).options(
+                        selectinload(UserIdentity.platform_connection)
+                    ).where(UserIdentity.external_id == external_id)
+                    return session.exec(statement).first()
+
+        # Test querying identity with hybrid property
+        gql_query = '''
+            query GetIdentity {
+                identity(externalId: "+1234567890") {
+                    externalId
+                    identityType
+                }
+            }
+        '''
+
+        result = schema.executor().execute(gql_query)
+
+        # Check if there are errors
+        if result.errors:
+            print("Errors:", result.errors)
+
+        assert result.errors is None or len(result.errors) == 0
+        assert result.data is not None
+        assert result.data["identity"]["externalId"] == "+1234567890"
+        # The identity_type should be derived from platform_connection
+        assert result.data["identity"]["identityType"] == "WHATSAPP"
